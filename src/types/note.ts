@@ -1,7 +1,15 @@
 export type Note = {
-  id: String;
-  content: String;
-  title: String;
-  createdAt: String;
-  updatedAt: String;
+  id: string;
+  content: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FetchedNote = {
+  _id: string;
+  content: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
 };

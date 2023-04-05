@@ -1,81 +1,124 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrevious } from "../../hooks/usePrevious";
 import { Note } from "../../types/note";
 import MenuBar from "./components/menu_bar";
 import NoteContent from "./components/note_content";
 import SideBar from "./components/side_bar/side_bar";
 import { Container, NoteSection } from "./styles";
+import { useFetchNoteList } from "../../hooks/useFetchNoteList";
+import { useCreateNewNote } from "../../hooks/useCreateNewNote";
+import { useDeleteNoteById } from "../../hooks/useDeleteNoteById";
+import { useSaveNoteById } from "../../hooks/useSaveNoteById";
+import debounce from "lodash.debounce";
+import { useFetchNoteById } from "../../hooks/useFetchNoteById";
 
-const dummyNotes: Note[] = [
-  {
-    id: "1",
-    content: "note 1",
-    title: "note 1",
-    updatedAt: "",
-    createdAt: "",
-  },
-  {
-    id: "2",
-    content: "note 2",
-    title: "note 2",
-    updatedAt: "",
-    createdAt: "",
-  },
-  {
-    id: "3",
-    content: "note 3",
-    title: "note 3",
-    updatedAt: "",
-    createdAt: "",
-  },
-];
+const API_URL = "http://localhost:3000/api/notes";
 
 const HomeScreen = () => {
-  const [noteList, setNoteList] = useState<Note[]>([...dummyNotes]);
+  const {
+    data: fetchedNoteList,
+    error: fetchNoteListError,
+    loading: fetchNoteListLoading,
+  } = useFetchNoteList(API_URL);
+  const { data: newNote, dispatchCreate } = useCreateNewNote(
+    `${API_URL}/notes`
+  );
+  const { dispatchSaveNote } = useSaveNoteById(API_URL);
+  const { dispatchDelete } = useDeleteNoteById(API_URL);
+  const { dispatchFetchNoteBydId, data: fetchedNote } =
+    useFetchNoteById(API_URL);
+  const [noteList, setNoteList] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState<Note>();
   const [topNoteInSidebar, setTopNoteInSideBar] = useState<Note>();
   const noteContentRef = useRef<HTMLTextAreaElement>(null);
-  const prevNoteList = usePrevious<Note[]>(noteList);
+  const prevNoteList = usePrevious<Note[] | undefined>(noteList);
+
+  const intervalRef = useRef<NodeJS.Timer>();
 
   useEffect(() => {
-    setTopNoteInSideBar(noteList[0]);
-    setCurrentNote(noteList[0]);
-    const newNoteList = [...noteList];
-    newNoteList.shift();
-    setNoteList(newNoteList);
-  }, []);
-
-  useEffect(() => {
-    if (noteList && noteList?.length > prevNoteList?.length) {
+    if (noteList && prevNoteList && noteList?.length > prevNoteList?.length) {
       focusNoteContent();
     }
   }, [noteList]);
 
+  useEffect(() => {
+    if (fetchNoteListError) {
+      alert("Fetch notes failed");
+    }
+
+    if (fetchedNoteList && fetchedNoteList.length > 0) {
+      setTopNoteInSideBar(fetchedNoteList[0]);
+      setCurrentNote(fetchedNoteList[0]);
+      fetchedNoteList.shift();
+
+      setNoteList(fetchedNoteList);
+    }
+  }, [fetchedNoteList, fetchNoteListError]);
+
+  useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (currentNote) {
+      intervalRef.current = setInterval(() => {
+        dispatchFetchNoteBydId(currentNote.id);
+      }, 1000);
+    }
+  }, [currentNote?.id]);
+
+  useEffect(() => {
+    if (fetchedNote && fetchedNote.id === currentNote?.id) {
+      setCurrentNote(fetchedNote);
+    }
+  }, [fetchedNote]);
+
   const focusNoteContent = () => {
     noteContentRef.current?.focus();
+    if (currentNote) {
+      const end = currentNote?.content.length;
+      noteContentRef.current?.setSelectionRange(end, end);
+    }
   };
 
   const createNewNote = () => {
-    const newNote: Note = {
-      id: "abc",
-      content: "",
-      title: "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const newNoteList = [topNoteInSidebar, ...noteList];
-
-    setNoteList(newNoteList as Note[]);
-    setCurrentNote(newNote);
-    setTopNoteInSideBar(newNote);
+    dispatchCreate({ content: "", title: "" });
   };
+
+  const deleteNote = (id: string) => {
+    dispatchDelete(id);
+  };
+
+  useEffect(() => {
+    if (newNote) {
+      const newNoteList = [topNoteInSidebar, ...noteList];
+
+      setNoteList(newNoteList as Note[]);
+      setCurrentNote(newNote);
+      setTopNoteInSideBar(newNote);
+    }
+  }, [newNote]);
 
   const selectNote = (selectedNote: Note) => {
+    if (currentNote && currentNote.content.length === 0) {
+      deleteNote(currentNote.id);
+
+      setTopNoteInSideBar(selectedNote);
+    }
     setCurrentNote(selectedNote);
+    dispatchFetchNoteBydId(selectedNote.id);
   };
 
-  const editContentOfCurrentNote = (newContent: String) => {
+  const debounceSaveNote = useCallback(
+    debounce((payload: { id: string; content: string; title: string }) => {
+      dispatchSaveNote(payload.id, {
+        content: payload.content,
+        title: payload.title,
+      });
+    }, 1000),
+    []
+  );
+
+  const editContentOfCurrentNote = (newContent: string) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
     if (currentNote!.id !== topNoteInSidebar!.id) {
       let newNoteList = [...noteList] as Note[];
 
@@ -98,6 +141,11 @@ const HomeScreen = () => {
 
     setCurrentNote(newNote);
     setTopNoteInSideBar(newNote);
+    debounceSaveNote({
+      id: newNote.id,
+      content: newNote.content,
+      title: newNote.title,
+    });
   };
 
   return (
@@ -105,6 +153,7 @@ const HomeScreen = () => {
       <MenuBar createNewNote={createNewNote} />
       <NoteSection>
         <SideBar
+          currentNoteId={currentNote?.id}
           notes={noteList}
           selectNote={selectNote}
           createNewNote={createNewNote}

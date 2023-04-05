@@ -4,7 +4,7 @@ import { Container } from "./style";
 
 type NoteContentProps = {
   note?: Note;
-  editContent: (content: String) => void;
+  editContent: (content: string) => void;
 };
 
 const NoteContent = forwardRef<HTMLTextAreaElement, NoteContentProps>(
@@ -19,7 +19,7 @@ const NoteContent = forwardRef<HTMLTextAreaElement, NoteContentProps>(
       <Container>
         <textarea
           key={note.id as React.Key}
-          defaultValue={note.content as string}
+          value={note.content}
           onChange={textChangeHandler}
           ref={ref}
           style={{
