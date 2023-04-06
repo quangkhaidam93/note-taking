@@ -1,12 +1,27 @@
+import { deleteIcon, newNoteIcon } from "../../../../assets/icons";
+import { ActionIcon, AppTitle, MenuBarContainer } from "./style";
+
 type MenuBarProps = {
   createNewNote: () => void;
+  deleteNote: () => void;
+  disabledNewNote: boolean;
 };
 
-const MenuBar: React.FC<MenuBarProps> = ({ createNewNote }) => {
+const MenuBar: React.FC<MenuBarProps> = ({
+  disabledNewNote,
+  createNewNote,
+  deleteNote,
+}) => {
   return (
-    <div style={{ height: 40, backgroundColor: "green" }}>
-      <button onClick={createNewNote}>New Note</button>
-    </div>
+    <MenuBarContainer>
+      <AppTitle>Note Taking App</AppTitle>
+      <ActionIcon
+        src={newNoteIcon}
+        alt="new-note-icon"
+        onClick={disabledNewNote ? () => {} : createNewNote}
+      />
+      <ActionIcon src={deleteIcon} onClick={deleteNote} />
+    </MenuBarContainer>
   );
 };
 

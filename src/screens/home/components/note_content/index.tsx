@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { Note } from "../../../../types/note";
-import { Container } from "./style";
+import { Container, ContentEditor, Date } from "./style";
+import dayjs from "dayjs";
 
 type NoteContentProps = {
   note?: Note;
@@ -17,17 +18,13 @@ const NoteContent = forwardRef<HTMLTextAreaElement, NoteContentProps>(
 
     return (
       <Container>
-        <textarea
+        <Date>{dayjs(note.updatedAt).format("D MMMM YYYY - HH:mm")}</Date>
+        <ContentEditor
           key={note.id as React.Key}
           value={note.content}
           onChange={textChangeHandler}
           ref={ref}
-          style={{
-            width: "100%",
-            height: "100%",
-            border: "none",
-            outline: "none",
-          }}
+          style={{}}
         />
       </Container>
     );

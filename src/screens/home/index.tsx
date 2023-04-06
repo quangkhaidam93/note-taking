@@ -20,9 +20,7 @@ const HomeScreen = () => {
     error: fetchNoteListError,
     loading: fetchNoteListLoading,
   } = useFetchNoteList(API_URL);
-  const { data: newNote, dispatchCreate } = useCreateNewNote(
-    `${API_URL}/notes`
-  );
+  const { data: newNote, dispatchCreate } = useCreateNewNote(API_URL);
   const { dispatchSaveNote } = useSaveNoteById(API_URL);
   const { dispatchDelete } = useDeleteNoteById(API_URL);
   const { dispatchFetchNoteBydId, data: fetchedNote } =
@@ -84,10 +82,30 @@ const HomeScreen = () => {
 
   const deleteNote = (id: string) => {
     dispatchDelete(id);
+
+    let newNoteList = [...noteList];
+
+    if (topNoteInSidebar && topNoteInSidebar.id === id) {
+      setTopNoteInSideBar(newNoteList[0]);
+      setCurrentNote(newNoteList[0]);
+      newNoteList.splice(0, 1);
+    } else {
+      const removedIndex = noteList.findIndex((note) => note.id === id);
+      newNoteList.splice(removedIndex, 1);
+      setCurrentNote(topNoteInSidebar);
+    }
+
+    setNoteList(newNoteList);
   };
 
   useEffect(() => {
     if (newNote) {
+      if (noteList.length === 0 && !topNoteInSidebar) {
+        setCurrentNote(newNote);
+        setTopNoteInSideBar(newNote);
+        return;
+      }
+
       const newNoteList = [topNoteInSidebar, ...noteList];
 
       setNoteList(newNoteList as Note[]);
@@ -112,6 +130,12 @@ const HomeScreen = () => {
         content: payload.content,
         title: payload.title,
       });
+
+      if (currentNote) {
+        intervalRef.current = setInterval(() => {
+          dispatchFetchNoteBydId(currentNote.id);
+        }, 1000);
+      }
     }, 1000),
     []
   );
@@ -150,21 +174,33 @@ const HomeScreen = () => {
 
   return (
     <Container>
-      <MenuBar createNewNote={createNewNote} />
-      <NoteSection>
-        <SideBar
-          currentNoteId={currentNote?.id}
-          notes={noteList}
-          selectNote={selectNote}
-          createNewNote={createNewNote}
-          topNode={topNoteInSidebar}
-        />
-        <NoteContent
-          ref={noteContentRef}
-          note={currentNote}
-          editContent={editContentOfCurrentNote}
-        />
-      </NoteSection>
+      {fetchNoteListLoading ? (
+        <div>Loading...</div>
+      ) : (
+        <>
+          <MenuBar
+            disabledNewNote={currentNote?.content.length === 0}
+            createNewNote={createNewNote}
+            deleteNote={
+              currentNote ? () => deleteNote(currentNote.id) : () => {}
+            }
+          />
+          <NoteSection>
+            <SideBar
+              currentNoteId={currentNote?.id}
+              notes={noteList}
+              selectNote={selectNote}
+              createNewNote={createNewNote}
+              topNode={topNoteInSidebar}
+            />
+            <NoteContent
+              ref={noteContentRef}
+              note={currentNote}
+              editContent={editContentOfCurrentNote}
+            />
+          </NoteSection>
+        </>
+      )}
     </Container>
   );
 };

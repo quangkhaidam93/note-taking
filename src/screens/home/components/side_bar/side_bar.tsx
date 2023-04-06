@@ -1,4 +1,5 @@
 import { Note } from "../../../../types/note";
+import NoteItem from "./note_item";
 import { Container, EmptyContainer } from "./style";
 
 type SideBarProps = {
@@ -28,29 +29,25 @@ const SideBar: React.FC<SideBarProps> = ({
   return (
     <Container>
       {topNode && (
-        <div
-          style={{
-            padding: 12,
-            borderBottom: "1px solid black",
-            backgroundColor: currentNoteId === topNode.id ? "red" : "",
-          }}
+        <NoteItem
+          isHighlight={currentNoteId === topNode.id}
+          isNewNote={topNode.title.length === 0}
           onClick={() => selectNote(topNode)}
-        >
-          {topNode.title.length === 0 ? "New Note" : topNode.title}
-        </div>
+          title={topNode.title}
+          updatedAt={topNode.updatedAt}
+          content={topNode.content}
+        />
       )}
       {notes.map((note) => (
-        <div
+        <NoteItem
           key={note.id}
-          style={{
-            padding: 12,
-            borderBottom: "1px solid black",
-            backgroundColor: currentNoteId === note.id ? "red" : "",
-          }}
+          isHighlight={currentNoteId === note.id}
+          isNewNote={note.title.length === 0}
           onClick={() => selectNote(note)}
-        >
-          {note.title.length === 0 ? "New Note" : note.title}
-        </div>
+          title={note.title}
+          updatedAt={note.updatedAt}
+          content={note.content}
+        />
       ))}
     </Container>
   );
