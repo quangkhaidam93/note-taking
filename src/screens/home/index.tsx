@@ -131,11 +131,9 @@ const HomeScreen = () => {
         title: payload.title,
       });
 
-      if (currentNote) {
-        intervalRef.current = setInterval(() => {
-          dispatchFetchNoteBydId(currentNote.id);
-        }, 1000);
-      }
+      intervalRef.current = setInterval(() => {
+        dispatchFetchNoteBydId(payload.id);
+      }, 1000);
     }, 1000),
     []
   );
